@@ -144,16 +144,7 @@
 
     
    // —— Admin toggle avec mot de passe
-const setAdmin = (v) => {
-  isAdmin = v;
-  localStorage.setItem(KEYS.admin, JSON.stringify(v));
-  sectionAdmin.classList.toggle('hidden', !v);
-  render();
-};
 
-const ADMIN_PASSWORD = "coach2025"; // 👉 Change ce mot de passe si tu veux
-
-// —— Admin toggle (avec mot de passe) — BLOC PROPRE
 const setAdmin = (v) => {
   isAdmin = v;
   localStorage.setItem(KEYS.admin, JSON.stringify(v));
@@ -167,11 +158,8 @@ btnAdmin.addEventListener('click', () => {
   try {
     if (!isAdmin) {
       const entered = prompt('🔐 Entrez le code admin :');
-      if (entered === ADMIN_PASSWORD) {
-        setAdmin(true);
-      } else {
-        alert('Code incorrect ❌');
-      }
+      if (entered === ADMIN_PASSWORD) setAdmin(true);
+      else alert('Code incorrect ❌');
     } else {
       setAdmin(false);
     }
@@ -189,6 +177,7 @@ btnClient.addEventListener('click', () => {
     console.error(e);
   }
 });
+
 
 
 
