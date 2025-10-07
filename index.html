@@ -153,25 +153,43 @@ const setAdmin = (v) => {
 
 const ADMIN_PASSWORD = "coach2025"; // 👉 Change ce mot de passe si tu veux
 
+// —— Admin toggle (avec mot de passe) — BLOC PROPRE
+const setAdmin = (v) => {
+  isAdmin = v;
+  localStorage.setItem(KEYS.admin, JSON.stringify(v));
+  sectionAdmin.classList.toggle('hidden', !v);
+  render();
+};
+
+const ADMIN_PASSWORD = "coach2025"; // ← change-le si tu veux
+
 btnAdmin.addEventListener('click', () => {
-  if (!isAdmin) {
-    const entered = prompt('🔐 Entrez le code admin :');
-    if (entered === ADMIN_PASSWORD) {
-      setAdmin(true);
+  try {
+    if (!isAdmin) {
+      const entered = prompt('🔐 Entrez le code admin :');
+      if (entered === ADMIN_PASSWORD) {
+        setAdmin(true);
+      } else {
+        alert('Code incorrect ❌');
+      }
     } else {
-      alert('Code incorrect ❌');
+      setAdmin(false);
     }
-  } else {
-    setAdmin(false);
+  } catch (e) {
+    console.error(e);
+    alert('Erreur: ' + e.message);
   }
 });
 
 btnClient.addEventListener('click', () => {
-  window.scrollTo({
-    top: document.getElementById('section-client').offsetTop - 12,
-    behavior: 'smooth'
-  });
+  try {
+    const sec = document.getElementById('section-client');
+    if (sec) window.scrollTo({ top: sec.offsetTop - 12, behavior: 'smooth' });
+  } catch (e) {
+    console.error(e);
+  }
 });
+
 
 
     // Branding text
