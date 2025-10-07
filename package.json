@@ -1,0 +1,8 @@
+{
+  "name": "ardu-coaching-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "twilio": "^4.21.0"
+  }
+}
