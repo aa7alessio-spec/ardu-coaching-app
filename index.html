@@ -269,7 +269,21 @@
     async function notifyManySMS(list, text){ if(!SMS_ENDPOINT){ alert('SMS_ENDPOINT non configuré'); return false; } const results=await Promise.all(list.map(n=>sendSMS(normalizePhone(n), text))); return results.every(Boolean); }
     function uniquePhones(){ const set=new Set(); Object.values(bookings).flat().forEach(b=>{ if(b.phone) set.add(b.phone); }); return Array.from(set); }
 
-    // init
+        // —— Envoi SMS via Vercel API
+    async function sendSMS(to, message) {
+      try {
+        const res = await fetch('/api/sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to, message }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        alert('📩 SMS envoyé avec succès');
+      } catch (e) {
+        alert('Erreur envoi SMS: ' + e.message);
+      }
+    }
+// init
     render();
   </script>
 </body>
