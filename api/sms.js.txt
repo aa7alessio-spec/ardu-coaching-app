@@ -1,0 +1,16 @@
+// api/sms.js  (Vercel Serverless Function)
+import twilio from 'twilio';
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+  const { to, message } = req.body || {};
+  if (!to || !message) return res.status(400).send('Missing to or message');
+
+  try {
+    const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+    await client.messages.create({ to, from: process.env.TWILIO_FROM, body: message });
+    return res.status(200).send('OK');
+  } catch (e) {
+    return res.status(500).send(e.message);
+  }
+}

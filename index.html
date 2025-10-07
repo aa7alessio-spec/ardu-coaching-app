@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Réservations — Ardu Coaching</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--ink:#0f172a;--muted:#64748b;--primary:#0ea5e9;--ok:#10b981;--warn:#ef4444;--ring:#e2e8f0}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    header{position:sticky;top:0;backdrop-filter:saturate(140%) blur(6px);background:rgba(255,255,255,.8);border-bottom:1px solid var(--ring)}
+    .container{max-width:980px;margin:0 auto;padding:16px}
+    h1{margin:0;font-size:22px} .muted{color:var(--muted)}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .btn{appearance:none;border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:600}
+    .btn.secondary{background:transparent;color:var(--primary)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:10px;font-size:12px}
+    .badge.ok{background:#d1fae5;color:#065f46} .badge.warn{background:#fee2e2;color:#991b1b}
+    label{display:block;font-size:12px;color:var(--muted)} input,select{width:100%;padding:10px;border:1px solid var(--ring);border-radius:12px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}}
+    .slot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid var(--ring);border-radius:14px}
+    .slot h4{margin:0 0 4px 0}
+    .small{font-size:12px}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container hero">
+      <div>
+        <h1 id="title">Réservez votre séance — <span id="brand">Ardu Coaching</span></h1>
+        <!-- JOURS FIXES (pas d'heures) -->
+        <div class="muted small" id="subtitle">1ʳᵉ séance d’essai gratuite • Mercredi • Vendredi • Samedi</div>
+      </div>
+      <div>
+        <button id="cta-client" class="btn">Voir les créneaux</button>
+        <button id="cta-admin" class="btn secondary" title="Basculer admin">Espace admin</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" id="app">
+    <section class="card" id="section-client">
+      <h2>Prochains créneaux</h2>
+      <div id="slots" class="grid"></div>
+      <div id="empty" class="muted">Aucun créneau pour le moment.</div>
+    </section>
+
+    <section class="card hidden" id="section-admin">
+      <h2>Administration</h2>
+      <div class="grid two">
+        <div>
+          <label>Date</label>
+          <input type="date" id="date"/>
+        </div>
+        <div>
+          <label>Capacité (2–6)</label>
+          <input type="number" id="cap" min="2" max="6" value="6"/>
+        </div>
+        <div>
+          <label>Début</label>
+          <input type="time" id="start" value="17:00"/>
+        </div>
+        <div>
+          <label>Fin</label>
+          <input type="time" id="end" value="18:15"/>
+        </div>
+        <div class="grid" style="grid-column:1/-1">
+          <label>Thème</label>
+          <input id="theme" placeholder="Renforcement doux"/>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="add">Ajouter le créneau</button>
+        <button class="btn secondary" id="seed">Ajouter 3 créneaux de test</button>
+        <button class="btn secondary" id="wipe">Vider les données</button>
+        <!-- SMS admin tools -->
+        <input id="sms-test-number" placeholder="Numéro test (+324...)" style="padding:10px;border:1px solid var(--ring);border-radius:12px"/>
+        <button class="btn secondary" id="sms-test">Envoyer SMS test</button>
+        <button class="btn secondary" id="sms-notify-all">Notifier tous les contacts (SMS)</button>
+      </div>
+    </section>
+  </main>
+
+  <template id="slot-template">
+    <div class="slot">
+      <div>
+        <h4 class="title"></h4>
+        <div class="muted small theme"></div>
+        <div class="small when"></div>
+      </div>
+      <div style="text-align:right">
+        <div class="small left"></div>
+        <div class="small muted" style="margin:4px 0 8px 0">Réservation : nom + téléphone</div>
+        <div class="grid">
+          <input class="in-name" placeholder="Nom et prénom"/>
+          <input class="in-phone" placeholder="Téléphone (WhatsApp)"/>
+          <button class="btn btn-book">Réserver</button>
+          <button class="btn secondary btn-share">Annoncer sur WhatsApp</button>
+          <button class="btn secondary btn-sms hidden">Notifier par SMS (admin)</button>
+          <button class="btn secondary btn-cancel hidden">Annuler ma réservation</button>
+          <button class="btn secondary btn-delete hidden">Supprimer (admin)</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    // —— Keys & helpers
+    const KEYS={slots:'sb_slots_v1', bookings:'sb_bookings_v1', admin:'sb_admin_v1'};
+    const uid=()=>Math.random().toString(36).slice(2,9);
+    const fmtDate=(d)=>d.toLocaleDateString('fr-BE',{weekday:'short',day:'2-digit',month:'short'});
+    const fmtTime=(d)=>d.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
+    const parse=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f}catch{return f}}
+
+    // —— Branding & notifications config
+    const COMPANY_NAME='Ardu Coaching';
+    const FIXED_DAYS='Mercredi • Vendredi • Samedi';
+    // IMPORTANT: mets ici l'URL de ta fonction serveur (Netlify/Vercel) qui envoie les SMS via Twilio
+    // Exemple Netlify: 'https://ton-site.netlify.app/.netlify/functions/sms'
+    // Exemple Vercel:  'https://ton-site.vercel.app/api/sms'
+    const SMS_ENDPOINT='';
+
+    // —— State
+    let slots=parse(KEYS.slots,[]);
+    let bookings=parse(KEYS.bookings,{}); // { [slotId]: [{id,name,phone,ts}] }
+    let isAdmin=!!JSON.parse(localStorage.getItem(KEYS.admin)||'false');
+
+    const save=()=>{localStorage.setItem(KEYS.slots,JSON.stringify(slots));localStorage.setItem(KEYS.bookings,JSON.stringify(bookings))}
+
+    // —— DOM refs
+    const elSlots=document.getElementById('slots');
+    const elEmpty=document.getElementById('empty');
+    const tpl=document.getElementById('slot-template');
+
+    const sectionAdmin=document.getElementById('section-admin');
+    const btnAdmin=document.getElementById('cta-admin');
+    const btnClient=document.getElementById('cta-client');
+
+    // —— Admin toggle
+    const setAdmin=(v)=>{isAdmin=v;localStorage.setItem(KEYS.admin,JSON.stringify(v));sectionAdmin.classList.toggle('hidden',!v);render()}
+    btnAdmin.addEventListener('click',()=>setAdmin(!isAdmin))
+    btnClient.addEventListener('click',()=>window.scrollTo({top:document.getElementById('section-client').offsetTop-12,behavior:'smooth'}))
+
+    // Branding text
+    document.getElementById('brand').textContent=COMPANY_NAME;
+    document.getElementById('subtitle').textContent=`1ʳᵉ séance d’essai gratuite • ${FIXED_DAYS}`;
+
+    // —— Add slot
+    document.getElementById('add').addEventListener('click',()=>{
+      const date=document.getElementById('date').value;
+      const start=document.getElementById('start').value;
+      const end=document.getElementById('end').value;
+      const cap=Number(document.getElementById('cap').value||6);
+      const theme=document.getElementById('theme').value||'Renforcement doux';
+      if(!date){alert('Choisis une date');return}
+      const sISO=toISO(date,start), eISO=toISO(date,end);
+      slots.push({id:uid(),start:sISO,end:eISO,capacity:cap,theme});
+      save(); render();
+
+      // Notification SMS à tous les contacts déjà connus
+      if(SMS_ENDPOINT){
+        const text=`[${COMPANY_NAME}] Nouveau créneau dispo !\n${date} ${start} → ${end}\nThème : ${theme}`;
+        notifyManySMS(uniquePhones(), text);
+      }
+    })
+
+    // seed test
+    document.getElementById('seed').addEventListener('click',()=>{
+      const today=new Date();
+      const addDays=(n)=>{const d=new Date(today);d.setDate(d.getDate()+n);return d}
+      const mk=(d,sh,eh,cap,theme)=>({id:uid(),start:setTime(d,sh),end:setTime(d,eh),capacity:cap,theme})
+      slots.push(
+        mk(addDays(1),'17:15','18:30',6,'Renforcement doux'),
+        mk(addDays(3),'17:30','18:45',6,'Mobilité & équilibre'),
+        mk(addDays(4),'10:00','11:00',1,'Individuel')
+      );
+      save(); render();
+    })
+
+    // wipe
+    document.getElementById('wipe').addEventListener('click',()=>{if(confirm('Supprimer toutes les données ?')){slots=[];bookings={};save();render()}})
+
+    // —— Render
+    function render(){
+      const now=new Date();
+      const upcoming=[...slots].filter(s=>new Date(s.end)>now).sort((a,b)=>new Date(a.start)-new Date(b.start));
+      elSlots.innerHTML='';
+      elEmpty.style.display=upcoming.length? 'none':'block';
+      upcoming.forEach(slot=>{
+        const node=tpl.content.firstElementChild.cloneNode(true);
+        const d1=new Date(slot.start), d2=new Date(slot.end);
+        node.querySelector('.title').textContent=`${fmtDate(d1)} · ${fmtTime(d1)} – ${fmtTime(d2)}`;
+        node.querySelector('.theme').textContent=`Thème : ${slot.theme||'Général'}`;
+        node.querySelector('.when').textContent=`Capacité: ${slot.capacity}`;
+
+        const left=capacityLeft(slot.id,slot.capacity);
+        const leftEl=node.querySelector('.left');
+        leftEl.innerHTML= left>0 ? `<span class="badge ok">${left} place(s) dispo</span>` : `<span class="badge warn">Complet</span>`;
+
+        const inName=node.querySelector('.in-name');
+        const inPhone=node.querySelector('.in-phone');
+        const btnBook=node.querySelector('.btn-book');
+        const btnShare=node.querySelector('.btn-share');
+        const btnCancel=node.querySelector('.btn-cancel');
+        const btnDelete=node.querySelector('.btn-delete');
+        const btnSMS=node.querySelector('.btn-sms');
+
+        // Admin controls
+        if(isAdmin){ btnDelete.classList.remove('hidden'); btnCancel.classList.add('hidden'); if(btnSMS) btnSMS.classList.remove('hidden'); }
+        btnDelete.addEventListener('click',()=>{ if(confirm('Supprimer ce créneau ?')){ delSlot(slot.id); render(); } });
+
+        // Booking
+        btnBook.addEventListener('click',()=>{
+          const name=(inName.value||'').trim();
+          const phone=(inPhone.value||'').trim();
+          if(!name||!phone){alert('Nom et téléphone requis');return}
+          if(capacityLeft(slot.id,slot.capacity)<=0){alert('Désolé, ce créneau est complet');return}
+          addBooking(slot.id,name,phone); inName.value=''; inPhone.value=''; render();
+        })
+
+        // Cancel booking (for quick manual test, cancels the last booking of same name)
+        btnCancel.addEventListener('click',()=>{
+          const name=(inName.value||'').trim();
+          if(!name){alert('Entre ton nom pour annuler ta réservation');return}
+          const list=bookings[slot.id]||[];
+          const bk=list.slice().reverse().find(b=>b.name.toLowerCase()===name.toLowerCase());
+          if(!bk){alert('Aucune réservation trouvée à ce nom');return}
+          cancelBooking(slot.id,bk.id); render();
+        })
+
+        btnShare.addEventListener('click',()=>{
+          const text=`Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nPlaces restantes : ${capacityLeft(slot.id,slot.capacity)}\nRépondez avec votre nom pour réserver.`;
+          if(navigator.share){navigator.share({text}).catch(()=>copy(text))} else {copy(text)}
+        })
+
+        if(btnSMS){
+          btnSMS.addEventListener('click',async ()=>{
+            const text=`[${COMPANY_NAME}] Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nRépondez avec votre nom pour réserver.`;
+            const contacts = uniquePhones();
+            if(!contacts.length){ alert('Aucun contact enregistré pour l\'instant'); return; }
+            const ok = await notifyManySMS(contacts, text);
+            alert(ok? `SMS envoyé à ${contacts.length} contact(s)` : 'Échec envoi SMS (vérifie SMS_ENDPOINT)');
+          });
+        }
+
+        elSlots.appendChild(node);
+      })
+    }
+
+    function capacityLeft(slotId,cap){ const n=(bookings[slotId]||[]).length; return Math.max(0,(cap||0)-n) }
+    function addBooking(slotId,name,phone){ const list=bookings[slotId]||[]; list.push({id:uid(),slotId,name,phone,ts:new Date().toISOString()}); bookings[slotId]=list; save();
+      // SMS de confirmation (si endpoint configuré)
+      const conf=`[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
+      if(SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
+    }
+    function cancelBooking(slotId,bookingId){ bookings[slotId]=(bookings[slotId]||[]).filter(b=>b.id!==bookingId); save(); }
+    function delSlot(id){ slots=slots.filter(s=>s.id!==id); delete bookings[id]; save(); }
+
+    function toISO(dateStr,timeStr){ const [y,m,d]=dateStr.split('-').map(Number); const [hh,mm]=timeStr.split(':').map(Number); const dt=new Date(y,m-1,d,hh,mm,0); return new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString() }
+    function setTime(date,hhmm){ const [hh,mm]=hhmm.split(':').map(Number); const d=new Date(date); d.setHours(hh,mm,0,0); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString() }
+    function copy(text){ navigator.clipboard && navigator.clipboard.writeText(text).then(()=>alert('Annonce copiée — colle dans WhatsApp')); }
+
+    // —— SMS helpers
+    function normalizePhone(p){ let x=(p||'').trim(); if(!x) return x; if(x.startsWith('00')) x='+'+x.slice(2); if(!x.startsWith('+')) x='+32'+x.replace(/^0/,''); return x; }
+    async function sendSMS(to, message){ if(!SMS_ENDPOINT){ console.warn('SMS_ENDPOINT non configuré'); return false; } try{ const r=await fetch(SMS_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,message})}); return r.ok; } catch(e){ console.error(e); return false; } }
+    async function notifyManySMS(list, text){ if(!SMS_ENDPOINT){ alert('SMS_ENDPOINT non configuré'); return false; } const results=await Promise.all(list.map(n=>sendSMS(normalizePhone(n), text))); return results.every(Boolean); }
+    function uniquePhones(){ const set=new Set(); Object.values(bookings).flat().forEach(b=>{ if(b.phone) set.add(b.phone); }); return Array.from(set); }
+
+    // init
+    render();
+  </script>
+</body>
+</html>
