@@ -140,10 +140,37 @@
     const btnAdmin=document.getElementById('cta-admin');
     const btnClient=document.getElementById('cta-client');
 
-    // —— Admin toggle
-    const setAdmin=(v)=>{isAdmin=v;localStorage.setItem(KEYS.admin,JSON.stringify(v));sectionAdmin.classList.toggle('hidden',!v);render()}
-    btnAdmin.addEventListener('click',()=>setAdmin(!isAdmin))
-    btnClient.addEventListener('click',()=>window.scrollTo({top:document.getElementById('section-client').offsetTop-12,behavior:'smooth'}))
+    
+   // —— Admin toggle avec mot de passe
+const setAdmin = (v) => {
+  isAdmin = v;
+  localStorage.setItem(KEYS.admin, JSON.stringify(v));
+  sectionAdmin.classList.toggle('hidden', !v);
+  render();
+};
+
+const ADMIN_PASSWORD = "coach2025"; // 👉 Change ce mot de passe si tu veux
+
+btnAdmin.addEventListener('click', () => {
+  if (!isAdmin) {
+    const entered = prompt('🔐 Entrez le code admin :');
+    if (entered === ADMIN_PASSWORD) {
+      setAdmin(true);
+    } else {
+      alert('Code incorrect ❌');
+    }
+  } else {
+    setAdmin(false);
+  }
+});
+
+btnClient.addEventListener('click', () => {
+  window.scrollTo({
+    top: document.getElementById('section-client').offsetTop - 12,
+    behavior: 'smooth'
+  });
+});
+
 
     // Branding text
     document.getElementById('brand').textContent=COMPANY_NAME;
