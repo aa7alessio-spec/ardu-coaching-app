@@ -95,9 +95,11 @@
         <div class="small left"></div>
         <div class="small muted" style="margin:4px 0 8px 0">Réservation : nom + téléphone</div>
         <div class="grid">
-          <input class="in-name" placeholder="Nom et prénom"/>
-          <input class="in-phone" placeholder="Téléphone (WhatsApp)"/>
-          <button class="btn btn-book">Réserver</button>
+         <input class="in-name" placeholder="Nom et prénom"/>
+<input class="in-phone" placeholder="Téléphone (WhatsApp)"/>
+<input class="in-pref" placeholder="Préférences / remarques (optionnel)"/>
+<button class="btn btn-book">Réserver</button>
+
           <button class="btn secondary btn-share">Annoncer sur WhatsApp</button>
           <button class="btn secondary btn-sms hidden">Notifier par SMS (admin)</button>
           <button class="btn secondary btn-cancel hidden">Annuler ma réservation</button>
@@ -230,6 +232,8 @@ btnClient.addEventListener('click', () => {
 
         const inName=node.querySelector('.in-name');
         const inPhone=node.querySelector('.in-phone');
+        const inPref=node.querySelector('.in-pref');
+
         const btnBook=node.querySelector('.btn-book');
         const btnShare=node.querySelector('.btn-share');
         const btnCancel=node.querySelector('.btn-cancel');
@@ -244,9 +248,13 @@ btnClient.addEventListener('click', () => {
         btnBook.addEventListener('click',()=>{
           const name=(inName.value||'').trim();
           const phone=(inPhone.value||'').trim();
+          const pref=(inPref?.value||'').trim();
+
           if(!name||!phone){alert('Nom et téléphone requis');return}
           if(capacityLeft(slot.id,slot.capacity)<=0){alert('Désolé, ce créneau est complet');return}
-          addBooking(slot.id,name,phone); inName.value=''; inPhone.value=''; render();
+          addBooking(slot.id,name,phone,pref);
+inName.value=''; inPhone.value=''; if(inPref) inPref.value=''; render();
+
         })
 
         // Cancel booking (for quick manual test, cancels the last booking of same name)
@@ -279,7 +287,12 @@ btnClient.addEventListener('click', () => {
     }
 
     function capacityLeft(slotId,cap){ const n=(bookings[slotId]||[]).length; return Math.max(0,(cap||0)-n) }
-    function addBooking(slotId,name,phone){ const list=bookings[slotId]||[]; list.push({id:uid(),slotId,name,phone,ts:new Date().toISOString()}); bookings[slotId]=list; save();
+    function addBooking(slotId,name,phone,pref){
+  const list=bookings[slotId]||[];
+  list.push({id:uid(),slotId,name,phone,pref,ts:new Date().toISOString()});
+  bookings[slotId]=list; save();
+}
+
       // SMS de confirmation (si endpoint configuré)
       const conf=`[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
       if(SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
