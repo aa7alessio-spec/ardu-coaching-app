@@ -109,224 +109,257 @@
     </div>
   </template>
 
-  <script>
-    // —— Keys & helpers
-    const KEYS={slots:'sb_slots_v1', bookings:'sb_bookings_v1', admin:'sb_admin_v1'};
-    const uid=()=>Math.random().toString(36).slice(2,9);
-    const fmtDate=(d)=>d.toLocaleDateString('fr-BE',{weekday:'short',day:'2-digit',month:'short'});
-    const fmtTime=(d)=>d.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
-    const parse=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f}catch{return f}}
+ <script>
+  // —— Keys & helpers
+  const KEYS = { slots:'sb_slots_v1', bookings:'sb_bookings_v1', admin:'sb_admin_v1' };
+  const uid = () => Math.random().toString(36).slice(2,9);
+  const fmtDate = d => d.toLocaleDateString('fr-BE',{weekday:'short',day:'2-digit',month:'short'});
+  const fmtTime = d => d.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
+  const parse = (k,f) => { try { return JSON.parse(localStorage.getItem(k)) || f } catch { return f } };
 
-    // —— Branding & notifications config
-    const COMPANY_NAME='Ardu Coaching';
-    const FIXED_DAYS='Mercredi • Vendredi • Samedi';
-    // IMPORTANT: mets ici l'URL de ta fonction serveur (Netlify/Vercel) qui envoie les SMS via Twilio
-    // Exemple Netlify: 'https://ton-site.netlify.app/.netlify/functions/sms'
-    // Exemple Vercel:  'https://ton-site.vercel.app/api/sms'
-    const SMS_ENDPOINT='/api/sms';
+  // —— Branding & notifications config
+  const COMPANY_NAME = 'Ardu Coaching';
+  const FIXED_DAYS   = 'Mercredi • Vendredi • Samedi';
+  const SMS_ENDPOINT = '/api/sms'; // ton endpoint Vercel
 
+  // —— State
+  let slots    = parse(KEYS.slots,[]);
+  let bookings = parse(KEYS.bookings,{}); // { [slotId]: [{id,name,phone,pref,ts}] }
+  let isAdmin  = !!JSON.parse(localStorage.getItem(KEYS.admin) || 'false');
 
-    // —— State
-    let slots=parse(KEYS.slots,[]);
-    let bookings=parse(KEYS.bookings,{}); // { [slotId]: [{id,name,phone,ts}] }
-    let isAdmin=!!JSON.parse(localStorage.getItem(KEYS.admin)||'false');
+  const save = () => {
+    localStorage.setItem(KEYS.slots, JSON.stringify(slots));
+    localStorage.setItem(KEYS.bookings, JSON.stringify(bookings));
+  };
 
-    const save=()=>{localStorage.setItem(KEYS.slots,JSON.stringify(slots));localStorage.setItem(KEYS.bookings,JSON.stringify(bookings))}
+  // —— DOM refs
+  const elSlots = document.getElementById('slots');
+  const elEmpty = document.getElementById('empty');
+  const tpl     = document.getElementById('slot-template');
 
-    // —— DOM refs
-    const elSlots=document.getElementById('slots');
-    const elEmpty=document.getElementById('empty');
-    const tpl=document.getElementById('slot-template');
+  const sectionAdmin = document.getElementById('section-admin');
+  const btnAdmin     = document.getElementById('cta-admin');
+  const btnClient    = document.getElementById('cta-client');
 
-    const sectionAdmin=document.getElementById('section-admin');
-    const btnAdmin=document.getElementById('cta-admin');
-    const btnClient=document.getElementById('cta-client');
+  // —— Admin toggle avec mot de passe
+  const setAdmin = (v) => {
+    isAdmin = v;
+    localStorage.setItem(KEYS.admin, JSON.stringify(v));
+    sectionAdmin.classList.toggle('hidden', !v);
+    render();
+  };
+  const ADMIN_PASSWORD = "coach2025";
 
-    
-   // —— Admin toggle avec mot de passe
+  btnAdmin.addEventListener('click', () => {
+    try {
+      if (!isAdmin) {
+        const entered = prompt('🔐 Entrez le code admin :');
+        if (entered === ADMIN_PASSWORD) setAdmin(true);
+        else alert('Code incorrect ❌');
+      } else {
+        setAdmin(false);
+      }
+    } catch (e) { console.error(e); alert('Erreur: ' + e.message); }
+  });
 
-const setAdmin = (v) => {
-  isAdmin = v;
-  localStorage.setItem(KEYS.admin, JSON.stringify(v));
-  sectionAdmin.classList.toggle('hidden', !v);
-  render();
-};
-
-const ADMIN_PASSWORD = "coach2025"; // ← change-le si tu veux
-
-btnAdmin.addEventListener('click', () => {
-  try {
-    if (!isAdmin) {
-      const entered = prompt('🔐 Entrez le code admin :');
-      if (entered === ADMIN_PASSWORD) setAdmin(true);
-      else alert('Code incorrect ❌');
-    } else {
-      setAdmin(false);
-    }
-  } catch (e) {
-    console.error(e);
-    alert('Erreur: ' + e.message);
-  }
-});
-
-btnClient.addEventListener('click', () => {
-  try {
+  btnClient.addEventListener('click', () => {
     const sec = document.getElementById('section-client');
     if (sec) window.scrollTo({ top: sec.offsetTop - 12, behavior: 'smooth' });
-  } catch (e) {
-    console.error(e);
-  }
-});
+  });
 
+  // Branding text
+  document.getElementById('brand').textContent = COMPANY_NAME;
+  document.getElementById('subtitle').textContent = `1ʳᵉ séance d’essai gratuite • ${FIXED_DAYS}`;
 
+  // —— Add slot
+  document.getElementById('add').addEventListener('click', () => {
+    const date  = document.getElementById('date').value;
+    const start = document.getElementById('start').value;
+    const end   = document.getElementById('end').value;
+    const cap   = Number(document.getElementById('cap').value || 6);
+    const theme = document.getElementById('theme').value || 'Renforcement doux';
+    if (!date) { alert('Choisis une date'); return; }
+    const sISO = toISO(date,start), eISO = toISO(date,end);
+    slots.push({ id:uid(), start:sISO, end:eISO, capacity:cap, theme });
+    save(); render();
 
+    // Notif SMS à tous les contacts déjà connus
+    if (SMS_ENDPOINT) {
+      const text = `[${COMPANY_NAME}] Nouveau créneau dispo !\n${date} ${start} → ${end}\nThème : ${theme}`;
+      notifyManySMS(uniquePhones(), text);
+    }
+  });
 
-    // Branding text
-    document.getElementById('brand').textContent=COMPANY_NAME;
-    document.getElementById('subtitle').textContent=`1ʳᵉ séance d’essai gratuite • ${FIXED_DAYS}`;
+  // seed test
+  document.getElementById('seed').addEventListener('click', () => {
+    const today = new Date();
+    const addDays = n => { const d = new Date(today); d.setDate(d.getDate()+n); return d; };
+    const mk = (d,sh,eh,cap,theme) => ({ id:uid(), start:setTime(d,sh), end:setTime(d,eh), capacity:cap, theme });
+    slots.push(
+      mk(addDays(1),'17:15','18:30',6,'Renforcement doux'),
+      mk(addDays(3),'17:30','18:45',6,'Mobilité & équilibre'),
+      mk(addDays(4),'10:00','11:00',1,'Individuel')
+    );
+    save(); render();
+  });
 
-    // —— Add slot
-    document.getElementById('add').addEventListener('click',()=>{
-      const date=document.getElementById('date').value;
-      const start=document.getElementById('start').value;
-      const end=document.getElementById('end').value;
-      const cap=Number(document.getElementById('cap').value||6);
-      const theme=document.getElementById('theme').value||'Renforcement doux';
-      if(!date){alert('Choisis une date');return}
-      const sISO=toISO(date,start), eISO=toISO(date,end);
-      slots.push({id:uid(),start:sISO,end:eISO,capacity:cap,theme});
-      save(); render();
+  // wipe
+  document.getElementById('wipe').addEventListener('click', () => {
+    if (confirm('Supprimer toutes les données ?')) { slots = []; bookings = {}; save(); render(); }
+  });
 
-      // Notification SMS à tous les contacts déjà connus
-      if(SMS_ENDPOINT){
-        const text=`[${COMPANY_NAME}] Nouveau créneau dispo !\n${date} ${start} → ${end}\nThème : ${theme}`;
-        notifyManySMS(uniquePhones(), text);
+  // —— Render
+  function render(){
+    const now = new Date();
+    const upcoming = [...slots]
+      .filter(s => new Date(s.end) > now)
+      .sort((a,b) => new Date(a.start) - new Date(b.start));
+
+    elSlots.innerHTML = '';
+    elEmpty.style.display = upcoming.length ? 'none' : 'block';
+
+    upcoming.forEach(slot => {
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      const d1 = new Date(slot.start), d2 = new Date(slot.end);
+      node.querySelector('.title').textContent = `${fmtDate(d1)} · ${fmtTime(d1)} – ${fmtTime(d2)}`;
+      node.querySelector('.theme').textContent = `Thème : ${slot.theme || 'Général'}`;
+      node.querySelector('.when').textContent  = `Capacité: ${slot.capacity}`;
+
+      const left   = capacityLeft(slot.id, slot.capacity);
+      const leftEl = node.querySelector('.left');
+      leftEl.innerHTML = left > 0
+        ? `<span class="badge ok">${left} place(s) dispo</span>`
+        : `<span class="badge warn">Complet</span>`;
+
+      const inName  = node.querySelector('.in-name');
+      const inPhone = node.querySelector('.in-phone');
+      const inPref  = node.querySelector('.in-pref');
+
+      const btnBook   = node.querySelector('.btn-book');
+      const btnShare  = node.querySelector('.btn-share');
+      const btnCancel = node.querySelector('.btn-cancel');
+      const btnDelete = node.querySelector('.btn-delete');
+      const btnSMS    = node.querySelector('.btn-sms');
+
+      // Admin controls
+      if (isAdmin) { btnDelete.classList.remove('hidden'); btnCancel.classList.add('hidden'); if (btnSMS) btnSMS.classList.remove('hidden'); }
+      btnDelete.addEventListener('click', () => { if (confirm('Supprimer ce créneau ?')) { delSlot(slot.id); render(); } });
+
+      // Booking
+      btnBook.addEventListener('click', () => {
+        const name = (inName.value  || '').trim();
+        const phone= (inPhone.value || '').trim();
+        const pref = (inPref?.value || '').trim();
+        if (!name || !phone) { alert('Nom et téléphone requis'); return; }
+        if (capacityLeft(slot.id,slot.capacity) <= 0) { alert('Désolé, ce créneau est complet'); return; }
+        addBooking(slot.id, name, phone, pref);
+        inName.value=''; inPhone.value=''; if (inPref) inPref.value=''; render();
+      });
+
+      // Cancel booking (simple)
+      btnCancel.addEventListener('click', () => {
+        const name = (inName.value || '').trim();
+        if (!name) { alert('Entre ton nom pour annuler ta réservation'); return; }
+        const list = bookings[slot.id] || [];
+        const bk = list.slice().reverse().find(b => b.name.toLowerCase() === name.toLowerCase());
+        if (!bk) { alert('Aucune réservation trouvée à ce nom'); return; }
+        cancelBooking(slot.id, bk.id); render();
+      });
+
+      btnShare.addEventListener('click', () => {
+        const text = `Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nPlaces restantes : ${capacityLeft(slot.id,slot.capacity)}\nRépondez avec votre nom pour réserver.`;
+        if (navigator.share) { navigator.share({ text }).catch(() => copy(text)); } else { copy(text); }
+      });
+
+      if (btnSMS) {
+        btnSMS.addEventListener('click', async () => {
+          const text = `[${COMPANY_NAME}] Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nRépondez avec votre nom pour réserver.`;
+          const contacts = uniquePhones();
+          if (!contacts.length) { alert('Aucun contact enregistré pour l\'instant'); return; }
+          const ok = await notifyManySMS(contacts, text);
+          alert(ok ? `SMS envoyé à ${contacts.length} contact(s)` : 'Échec envoi SMS (vérifie SMS_ENDPOINT)');
+        });
       }
-    })
 
-    // seed test
-    document.getElementById('seed').addEventListener('click',()=>{
-      const today=new Date();
-      const addDays=(n)=>{const d=new Date(today);d.setDate(d.getDate()+n);return d}
-      const mk=(d,sh,eh,cap,theme)=>({id:uid(),start:setTime(d,sh),end:setTime(d,eh),capacity:cap,theme})
-      slots.push(
-        mk(addDays(1),'17:15','18:30',6,'Renforcement doux'),
-        mk(addDays(3),'17:30','18:45',6,'Mobilité & équilibre'),
-        mk(addDays(4),'10:00','11:00',1,'Individuel')
-      );
-      save(); render();
-    })
+      elSlots.appendChild(node);
+    });
+  }
 
-    // wipe
-    document.getElementById('wipe').addEventListener('click',()=>{if(confirm('Supprimer toutes les données ?')){slots=[];bookings={};save();render()}})
+  function capacityLeft(slotId, cap) {
+    const n = (bookings[slotId] || []).length;
+    return Math.max(0, (cap || 0) - n);
+  }
 
-    // —— Render
-    function render(){
-      const now=new Date();
-      const upcoming=[...slots].filter(s=>new Date(s.end)>now).sort((a,b)=>new Date(a.start)-new Date(b.start));
-      elSlots.innerHTML='';
-      elEmpty.style.display=upcoming.length? 'none':'block';
-      upcoming.forEach(slot=>{
-        const node=tpl.content.firstElementChild.cloneNode(true);
-        const d1=new Date(slot.start), d2=new Date(slot.end);
-        node.querySelector('.title').textContent=`${fmtDate(d1)} · ${fmtTime(d1)} – ${fmtTime(d2)}`;
-        node.querySelector('.theme').textContent=`Thème : ${slot.theme||'Général'}`;
-        node.querySelector('.when').textContent=`Capacité: ${slot.capacity}`;
+  function addBooking(slotId, name, phone, pref){
+    const list = bookings[slotId] || [];
+    list.push({ id: uid(), slotId, name, phone, pref, ts: new Date().toISOString() });
+    bookings[slotId] = list;
+    save();
 
-        const left=capacityLeft(slot.id,slot.capacity);
-        const leftEl=node.querySelector('.left');
-        leftEl.innerHTML= left>0 ? `<span class="badge ok">${left} place(s) dispo</span>` : `<span class="badge warn">Complet</span>`;
+    // SMS de confirmation (si endpoint configuré)
+    const conf = `[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
+    if (SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
+  }
 
-        const inName=node.querySelector('.in-name');
-        const inPhone=node.querySelector('.in-phone');
-        const inPref=node.querySelector('.in-pref');
+  function cancelBooking(slotId, bookingId){
+    bookings[slotId] = (bookings[slotId] || []).filter(b => b.id !== bookingId);
+    save();
+  }
 
-        const btnBook=node.querySelector('.btn-book');
-        const btnShare=node.querySelector('.btn-share');
-        const btnCancel=node.querySelector('.btn-cancel');
-        const btnDelete=node.querySelector('.btn-delete');
-        const btnSMS=node.querySelector('.btn-sms');
+  function delSlot(id){
+    slots = slots.filter(s => s.id !== id);
+    delete bookings[id];
+    save();
+  }
 
-        // Admin controls
-        if(isAdmin){ btnDelete.classList.remove('hidden'); btnCancel.classList.add('hidden'); if(btnSMS) btnSMS.classList.remove('hidden'); }
-        btnDelete.addEventListener('click',()=>{ if(confirm('Supprimer ce créneau ?')){ delSlot(slot.id); render(); } });
+  function toISO(dateStr,timeStr){
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const [hh,mm] = timeStr.split(':').map(Number);
+    const dt = new Date(y,m-1,d,hh,mm,0);
+    return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString();
+  }
+  function setTime(date,hhmm){
+    const [hh,mm] = hhmm.split(':').map(Number);
+    const d = new Date(date); d.setHours(hh,mm,0,0);
+    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString();
+  }
+  function copy(text){
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(()=>alert('Annonce copiée — colle dans WhatsApp'));
+  }
 
-        // Booking
-        btnBook.addEventListener('click',()=>{
-          const name=(inName.value||'').trim();
-          const phone=(inPhone.value||'').trim();
-          const pref=(inPref?.value||'').trim();
+  // —— SMS helpers (UNE SEULE VERSION)
+  function normalizePhone(p){
+    let x = (p || '').trim();
+    if (!x) return x;
+    if (x.startsWith('00')) x = '+' + x.slice(2);
+    if (!x.startsWith('+')) x = '+32' + x.replace(/^0/,'');
+    return x;
+  }
+  async function sendSMS(to, message){
+    if (!SMS_ENDPOINT) { console.warn('SMS_ENDPOINT non configuré'); return false; }
+    try {
+      const r = await fetch(SMS_ENDPOINT, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ to, message })
+      });
+      return r.ok;
+    } catch(e){ console.error(e); return false; }
+  }
+  async function notifyManySMS(list, text){
+    if (!SMS_ENDPOINT) { alert('SMS_ENDPOINT non configuré'); return false; }
+    const results = await Promise.all(list.map(n => sendSMS(normalizePhone(n), text)));
+    return results.every(Boolean);
+  }
+  function uniquePhones(){
+    const set = new Set();
+    Object.values(bookings).flat().forEach(b => { if (b.phone) set.add(b.phone); });
+    return Array.from(set);
+  }
 
-          if(!name||!phone){alert('Nom et téléphone requis');return}
-          if(capacityLeft(slot.id,slot.capacity)<=0){alert('Désolé, ce créneau est complet');return}
-          addBooking(slot.id,name,phone,pref);
-inName.value=''; inPhone.value=''; if(inPref) inPref.value=''; render();
+  // init
+  render();
+</script>
 
-        })
-
-        // Cancel booking (for quick manual test, cancels the last booking of same name)
-        btnCancel.addEventListener('click',()=>{
-          const name=(inName.value||'').trim();
-          if(!name){alert('Entre ton nom pour annuler ta réservation');return}
-          const list=bookings[slot.id]||[];
-          const bk=list.slice().reverse().find(b=>b.name.toLowerCase()===name.toLowerCase());
-          if(!bk){alert('Aucune réservation trouvée à ce nom');return}
-          cancelBooking(slot.id,bk.id); render();
-        })
-
-        btnShare.addEventListener('click',()=>{
-          const text=`Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nPlaces restantes : ${capacityLeft(slot.id,slot.capacity)}\nRépondez avec votre nom pour réserver.`;
-          if(navigator.share){navigator.share({text}).catch(()=>copy(text))} else {copy(text)}
-        })
-
-        if(btnSMS){
-          btnSMS.addEventListener('click',async ()=>{
-            const text=`[${COMPANY_NAME}] Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nRépondez avec votre nom pour réserver.`;
-            const contacts = uniquePhones();
-            if(!contacts.length){ alert('Aucun contact enregistré pour l\'instant'); return; }
-            const ok = await notifyManySMS(contacts, text);
-            alert(ok? `SMS envoyé à ${contacts.length} contact(s)` : 'Échec envoi SMS (vérifie SMS_ENDPOINT)');
-          });
-        }
-
-        elSlots.appendChild(node);
-      })
-    }
-
-    function capacityLeft(slotId,cap){ const n=(bookings[slotId]||[]).length; return Math.max(0,(cap||0)-n) }
-  function addBooking(slotId,name,phone,pref){
-  const list = bookings[slotId] || [];
-  list.push({ id: uid(), slotId, name, phone, pref, ts: new Date().toISOString() });
-  bookings[slotId] = list;
-  save();
-
-  // SMS de confirmation (si endpoint configuré)
-  const conf = `[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
-  if (SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
-}
-
-
-      // SMS de confirmation (si endpoint configuré)
-      const conf=`[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
-      if(SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
-    }
-    function cancelBooking(slotId,bookingId){ bookings[slotId]=(bookings[slotId]||[]).filter(b=>b.id!==bookingId); save(); }
-    function delSlot(id){ slots=slots.filter(s=>s.id!==id); delete bookings[id]; save(); }
-
-    function toISO(dateStr,timeStr){ const [y,m,d]=dateStr.split('-').map(Number); const [hh,mm]=timeStr.split(':').map(Number); const dt=new Date(y,m-1,d,hh,mm,0); return new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString() }
-    function setTime(date,hhmm){ const [hh,mm]=hhmm.split(':').map(Number); const d=new Date(date); d.setHours(hh,mm,0,0); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString() }
-    function copy(text){ navigator.clipboard && navigator.clipboard.writeText(text).then(()=>alert('Annonce copiée — colle dans WhatsApp')); }
-
-    // —— SMS helpers
-    function normalizePhone(p){ let x=(p||'').trim(); if(!x) return x; if(x.startsWith('00')) x='+'+x.slice(2); if(!x.startsWith('+')) x='+32'+x.replace(/^0/,''); return x; }
-    async function sendSMS(to, message){ if(!SMS_ENDPOINT){ console.warn('SMS_ENDPOINT non configuré'); return false; } try{ const r=await fetch(SMS_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,message})}); return r.ok; } catch(e){ console.error(e); return false; } }
-    async function notifyManySMS(list, text){ if(!SMS_ENDPOINT){ alert('SMS_ENDPOINT non configuré'); return false; } const results=await Promise.all(list.map(n=>sendSMS(normalizePhone(n), text))); return results.every(Boolean); }
-    function uniquePhones(){ const set=new Set(); Object.values(bookings).flat().forEach(b=>{ if(b.phone) set.add(b.phone); }); return Array.from(set); }
-
-      
-    }
-// init
-    render();
-  </script>
 </body>
 </html>
