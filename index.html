@@ -1,4 +1,5 @@
-<!doctype html>
+
+      <!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8"/>
@@ -95,10 +96,10 @@
         <div class="small left"></div>
         <div class="small muted" style="margin:4px 0 8px 0">Réservation : nom + téléphone</div>
         <div class="grid">
-         <input class="in-name" placeholder="Nom et prénom"/>
-<input class="in-phone" placeholder="Téléphone (WhatsApp)"/>
-<input class="in-pref" placeholder="Préférences / remarques (optionnel)"/>
-<button class="btn btn-book">Réserver</button>
+          <input class="in-name" placeholder="Nom et prénom"/>
+          <input class="in-phone" placeholder="Téléphone (WhatsApp)"/>
+          <input class="in-pref" placeholder="Préférences / remarques (optionnel)"/>
+          <button class="btn btn-book">Réserver</button>
 
           <button class="btn secondary btn-share">Annoncer sur WhatsApp</button>
           <button class="btn secondary btn-sms hidden">Notifier par SMS (admin)</button>
@@ -121,6 +122,7 @@
   const COMPANY_NAME = 'Ardu Coaching';
   const FIXED_DAYS   = 'Mercredi • Vendredi • Samedi';
   const SMS_ENDPOINT = '/api/sms'; // ton endpoint Vercel
+  const ADMIN_PHONE  = '+32470184719'; // << ton numéro admin
 
   // —— State
   let slots    = parse(KEYS.slots,[]);
@@ -290,15 +292,29 @@
     return Math.max(0, (cap || 0) - n);
   }
 
+  // —— ICI : confirmation client + notification ADMIN
   function addBooking(slotId, name, phone, pref){
     const list = bookings[slotId] || [];
     list.push({ id: uid(), slotId, name, phone, pref, ts: new Date().toISOString() });
     bookings[slotId] = list;
     save();
 
-    // SMS de confirmation (si endpoint configuré)
+    // 1) SMS au client
     const conf = `[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
     if (SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
+
+    // 2) SMS à l'admin
+    if (SMS_ENDPOINT && ADMIN_PHONE && ADMIN_PHONE.trim()) {
+      const slot = slots.find(s => s.id === slotId);
+      const d1 = slot ? new Date(slot.start) : null;
+      const dateTxt = d1 ? fmtDate(d1) : '';
+      const timeTxt = d1 ? fmtTime(d1) : '';
+      const info = `[${COMPANY_NAME}] 📩 Nouvelle réservation
+Nom : ${name}
+Tel : ${phone}
+Créneau : ${dateTxt} ${timeTxt}`;
+      sendSMS(normalizePhone(ADMIN_PHONE), info);
+    }
   }
 
   function cancelBooking(slotId, bookingId){
@@ -357,9 +373,24 @@
     return Array.from(set);
   }
 
+  // —— Admin: SMS test + Notifier tous
+  document.getElementById('sms-test').addEventListener('click', async () => {
+    const num = document.getElementById('sms-test-number').value.trim();
+    if (!num) return alert("Entre un numéro (+324...)");
+    const ok = await sendSMS(normalizePhone(num), `[${COMPANY_NAME}] Test SMS OK ✔️`);
+    alert(ok ? "SMS test envoyé" : "Échec envoi SMS");
+  });
+
+  document.getElementById('sms-notify-all').addEventListener('click', async () => {
+    const list = uniquePhones();
+    if (!list.length) return alert("Aucun contact enregistré");
+    const ok = await notifyManySMS(list, `[${COMPANY_NAME}] Nouveau créneau dispo — ouvre le lien et réserve !`);
+    alert(ok ? `SMS envoyé à ${list.length} contact(s)` : "Échec envoi SMS");
+  });
+
   // init
   render();
-</script>
-
+ </script>
 </body>
 </html>
+
