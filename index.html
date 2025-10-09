@@ -1,396 +1,265 @@
-
-      <!doctype html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Réservations — Ardu Coaching</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ardu Coaching — Réservations</title>
   <style>
-    :root{--bg:#f8fafc;--card:#fff;--ink:#0f172a;--muted:#64748b;--primary:#0ea5e9;--ok:#10b981;--warn:#ef4444;--ring:#e2e8f0}
-    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    header{position:sticky;top:0;backdrop-filter:saturate(140%) blur(6px);background:rgba(255,255,255,.8);border-bottom:1px solid var(--ring)}
-    .container{max-width:980px;margin:0 auto;padding:16px}
-    h1{margin:0;font-size:22px} .muted{color:var(--muted)}
-    .row{display:flex;gap:16px;flex-wrap:wrap}
-    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .btn{appearance:none;border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:600}
-    .btn.secondary{background:transparent;color:var(--primary)}
-    .badge{display:inline-block;padding:4px 8px;border-radius:10px;font-size:12px}
-    .badge.ok{background:#d1fae5;color:#065f46} .badge.warn{background:#fee2e2;color:#991b1b}
-    label{display:block;font-size:12px;color:var(--muted)} input,select{width:100%;padding:10px;border:1px solid var(--ring);border-radius:12px}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:720px){.grid.two{grid-template-columns:1fr 1fr}}
-    .slot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid var(--ring);border-radius:14px}
-    .slot h4{margin:0 0 4px 0}
-    .small{font-size:12px}
-    .hidden{display:none}
+    :root { --bg:#f8f8fb; --card:#ffffff; --ink:#111; --ink2:#444; --pri:#0d6efd; --ok:#16a34a; --danger:#dc2626; }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;}
+    body{margin:0;background:var(--bg);color:var(--ink);}
+    header{padding:20px 16px;text-align:center;}
+    h1{margin:0 0 6px;font-size:24px;}
+    .sub{color:var(--ink2);font-size:14px}
+    .container{max-width:860px;margin:0 auto;padding:0 12px 80px}
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:860px){.row{grid-template-columns:2fr 1fr}}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:14px}
+    .slot{border:1px solid #e9e9ef;border-radius:10px;padding:12px;margin-bottom:10px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .slot h3{margin:0 0 4px;font-size:16px}
+    .slot .meta{font-size:13px;color:var(--ink2)}
+    button, input, select, textarea{font-size:15px}
+    button{background:var(--pri);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .ghost{background:#f0f3ff;color:#0d3dfd}
+    .danger{background:var(--danger)}
+    .ok{background:var(--ok)}
+    .admin-fab{position:fixed;right:14px;bottom:14px;background:#111;color:#fff;border-radius:999px;padding:10px 14px;opacity:.85}
+    .inline{display:flex;gap:8px;align-items:center}
+    .small{font-size:13px;color:var(--ink2)}
+    .muted{color:var(--ink2)}
+    label{display:block;font-size:13px;color:var(--ink2);margin-bottom:4px}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #e4e6ef;border-radius:10px;background:#fff}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .notice{padding:10px;background:#f4f6ff;border:1px solid #e5e9ff;border-radius:10px}
   </style>
 </head>
 <body>
   <header>
-    <div class="container hero">
-      <div>
-        <h1 id="title">Réservez votre séance — <span id="brand">Ardu Coaching</span></h1>
-        <!-- JOURS FIXES (pas d'heures) -->
-        <div class="muted small" id="subtitle">1ʳᵉ séance d’essai gratuite • Mercredi • Vendredi • Samedi</div>
-      </div>
-      <div>
-        <button id="cta-client" class="btn">Voir les créneaux</button>
-        <button id="cta-admin" class="btn secondary" title="Basculer admin">Espace admin</button>
-      </div>
-    </div>
+    <h1>Ardu Coaching</h1>
+    <div class="sub">Réserve ta séance (individuelle ou collective)</div>
   </header>
 
-  <main class="container" id="app">
-    <section class="card" id="section-client">
-      <h2>Prochains créneaux</h2>
-      <div id="slots" class="grid"></div>
-      <div id="empty" class="muted">Aucun créneau pour le moment.</div>
-    </section>
+  <div class="container">
+    <div class="row">
+      <!-- Liste créneaux -->
+      <section class="card">
+        <h2 style="margin:6px 0 10px">Créneaux disponibles</h2>
+        <div id="slots"></div>
+        <div id="empty" class="muted small">Aucun créneau pour l’instant.</div>
+      </section>
 
-    <section class="card hidden" id="section-admin">
-      <h2>Administration</h2>
-      <div class="grid two">
-        <div>
-          <label>Date</label>
-          <input type="date" id="date"/>
+      <!-- Réservation -->
+      <aside class="card">
+        <h3 style="margin:6px 0 10px">Réserver</h3>
+        <div class="notice small" style="margin-bottom:10px">
+          Choisis un créneau dans la liste, puis remplis ton nom et ton téléphone (format international, ex. +324xxxxxxxx).
         </div>
-        <div>
-          <label>Capacité (2–6)</label>
-          <input type="number" id="cap" min="2" max="6" value="6"/>
-        </div>
-        <div>
-          <label>Début</label>
-          <input type="time" id="start" value="17:00"/>
-        </div>
-        <div>
-          <label>Fin</label>
-          <input type="time" id="end" value="18:15"/>
-        </div>
-        <div class="grid" style="grid-column:1/-1">
-          <label>Thème</label>
-          <input id="theme" placeholder="Renforcement doux"/>
-        </div>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" id="add">Ajouter le créneau</button>
-        <button class="btn secondary" id="seed">Ajouter 3 créneaux de test</button>
-        <button class="btn secondary" id="wipe">Vider les données</button>
-        <!-- SMS admin tools -->
-        <input id="sms-test-number" placeholder="Numéro test (+324...)" style="padding:10px;border:1px solid var(--ring);border-radius:12px"/>
-        <button class="btn secondary" id="sms-test">Envoyer SMS test</button>
-        <button class="btn secondary" id="sms-notify-all">Notifier tous les contacts (SMS)</button>
-      </div>
-    </section>
-  </main>
+        <form id="reserveForm">
+          <div style="margin-bottom:8px">
+            <label>Créneau</label>
+            <select id="slotSelect" required></select>
+          </div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div><label>Nom et prénom</label><input id="name" required /></div>
+            <div><label>Téléphone (WhatsApp/SMS)</label><input id="phone" placeholder="+324..." required /></div>
+          </div>
+          <button id="reserveBtn" type="submit">Je réserve</button>
+          <div id="reserveMsg" class="small" style="margin-top:8px"></div>
+        </form>
+        <hr style="margin:14px 0;border:none;border-top:1px solid #eee">
+        <div class="small muted">Besoin d’aide ? aa7alessio@gmail.com</div>
+      </aside>
+    </div>
+  </div>
 
-  <template id="slot-template">
-    <div class="slot">
-      <div>
-        <h4 class="title"></h4>
-        <div class="muted small theme"></div>
-        <div class="small when"></div>
-      </div>
-      <div style="text-align:right">
-        <div class="small left"></div>
-        <div class="small muted" style="margin:4px 0 8px 0">Réservation : nom + téléphone</div>
-        <div class="grid">
-          <input class="in-name" placeholder="Nom et prénom"/>
-          <input class="in-phone" placeholder="Téléphone (WhatsApp)"/>
-          <input class="in-pref" placeholder="Préférences / remarques (optionnel)"/>
-          <button class="btn btn-book">Réserver</button>
+  <!-- Bouton Admin discret -->
+  <button class="admin-fab" id="adminFab">Admin</button>
 
-          <button class="btn secondary btn-share">Annoncer sur WhatsApp</button>
-          <button class="btn secondary btn-sms hidden">Notifier par SMS (admin)</button>
-          <button class="btn secondary btn-cancel hidden">Annuler ma réservation</button>
-          <button class="btn secondary btn-delete hidden">Supprimer (admin)</button>
+  <!-- Modale Admin ultra simple -->
+  <dialog id="adminDialog" style="border:none;border-radius:16px;max-width:560px;width:96%;padding:0">
+    <div class="card" style="border-radius:16px">
+      <div class="inline" style="justify-content:space-between;margin-bottom:8px">
+        <strong>Admin — Créer un créneau</strong>
+        <button class="ghost" id="closeAdmin">Fermer</button>
+      </div>
+      <div id="adminGate">
+        <label>Mot de passe</label>
+        <div class="inline">
+          <input id="adminPass" type="password" placeholder="••••••••" />
+          <button id="adminLogin">Entrer</button>
         </div>
+        <div class="small muted">Indice : celui que tu m’as donné 😉</div>
+      </div>
+      <div id="adminPanel" style="display:none">
+        <div class="grid2" style="margin-bottom:8px">
+          <div>
+            <label>Thème</label>
+            <input id="a_theme" placeholder="ex. Renforcement, Cardio, Mobilité" />
+          </div>
+          <div>
+            <label>Type</label>
+            <select id="a_type">
+              <option value="individuel">Individuel</option>
+              <option value="collectif">Collectif</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div>
+            <label>Date & heure</label>
+            <input id="a_datetime" type="datetime-local" />
+          </div>
+          <div>
+            <label>Capacité</label>
+            <input id="a_capacity" type="number" min="1" value="1" />
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <label>Message SMS (envoyé aux clientes quand tu publies)</label>
+          <textarea id="a_sms" rows="3" placeholder="Nouveau créneau Ardu Coaching disponible 👍"></textarea>
+        </div>
+        <button id="createSlot" class="ok">Publier le créneau</button>
+        <div id="adminMsg" class="small" style="margin-top:8px"></div>
+        <hr style="margin:14px 0;border:none;border-top:1px solid #eee">
+        <div class="small muted">Astuce : tu peux supprimer un créneau plein depuis la liste publique.</div>
       </div>
     </div>
-  </template>
+  </dialog>
 
- <script>
-  // —— Keys & helpers
-  const KEYS = { slots:'sb_slots_v1', bookings:'sb_bookings_v1', admin:'sb_admin_v1' };
-  const uid = () => Math.random().toString(36).slice(2,9);
-  const fmtDate = d => d.toLocaleDateString('fr-BE',{weekday:'short',day:'2-digit',month:'short'});
-  const fmtTime = d => d.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});
-  const parse = (k,f) => { try { return JSON.parse(localStorage.getItem(k)) || f } catch { return f } };
+  <script>
+    const ADMIN_PASSWORD = "coach2025";
 
-  // —— Branding & notifications config
-  const COMPANY_NAME = 'Ardu Coaching';
-  const FIXED_DAYS   = 'Mercredi • Vendredi • Samedi';
-  const SMS_ENDPOINT = '/api/sms'; // ton endpoint Vercel
-  const ADMIN_PHONE  = '+32470184719'; // << ton numéro admin
+    const els = {
+      list: document.getElementById('slots'),
+      empty: document.getElementById('empty'),
+      select: document.getElementById('slotSelect'),
+      reserveForm: document.getElementById('reserveForm'),
+      reserveBtn: document.getElementById('reserveBtn'),
+      reserveMsg: document.getElementById('reserveMsg'),
+      adminFab: document.getElementById('adminFab'),
+      adminDialog: document.getElementById('adminDialog'),
+      closeAdmin: document.getElementById('closeAdmin'),
+      adminGate: document.getElementById('adminGate'),
+      adminPanel: document.getElementById('adminPanel'),
+      adminPass: document.getElementById('adminPass'),
+      adminLogin: document.getElementById('adminLogin'),
+      a_theme: document.getElementById('a_theme'),
+      a_type: document.getElementById('a_type'),
+      a_datetime: document.getElementById('a_datetime'),
+      a_capacity: document.getElementById('a_capacity'),
+      a_sms: document.getElementById('a_sms'),
+      createSlot: document.getElementById('createSlot'),
+      adminMsg: document.getElementById('adminMsg'),
+    };
 
-  // —— State
-  let slots    = parse(KEYS.slots,[]);
-  let bookings = parse(KEYS.bookings,{}); // { [slotId]: [{id,name,phone,pref,ts}] }
-  let isAdmin  = !!JSON.parse(localStorage.getItem(KEYS.admin) || 'false');
+    function fmt(dtISO){
+      const d = new Date(dtISO);
+      return d.toLocaleString('fr-BE', { dateStyle: 'medium', timeStyle: 'short' });
+    }
 
-  const save = () => {
-    localStorage.setItem(KEYS.slots, JSON.stringify(slots));
-    localStorage.setItem(KEYS.bookings, JSON.stringify(bookings));
-  };
+    function render(slots){
+      els.list.innerHTML = '';
+      els.select.innerHTML = '';
+      if(!slots || slots.length===0){ els.empty.style.display='block'; return; }
+      els.empty.style.display='none';
 
-  // —— DOM refs
-  const elSlots = document.getElementById('slots');
-  const elEmpty = document.getElementById('empty');
-  const tpl     = document.getElementById('slot-template');
+      slots.forEach(s=>{
+        const left = s.capacity - (s.booked||0);
+        const wrap = document.createElement('div');
+        wrap.className='slot';
+        wrap.innerHTML = `
+          <div>
+            <h3>${s.theme} — <span class="muted">${s.type}</span></h3>
+            <div class="meta">${fmt(s.datetime)} • Capacité ${s.capacity} • Restant ${left}</div>
+          </div>
+          <div class="inline">
+            <button class="ghost smallBtn" data-id="${s.id}">Choisir</button>
+            <button class="danger smallBtnDel" data-id="${s.id}">Supprimer</button>
+          </div>
+        `;
+        els.list.appendChild(wrap);
 
-  const sectionAdmin = document.getElementById('section-admin');
-  const btnAdmin     = document.getElementById('cta-admin');
-  const btnClient    = document.getElementById('cta-client');
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.theme} • ${fmt(s.datetime)} (${left} restants)`;
+        if(left<=0){ opt.disabled = true; }
+        els.select.appendChild(opt);
+      });
 
-  // —— Admin toggle avec mot de passe
-  const setAdmin = (v) => {
-    isAdmin = v;
-    localStorage.setItem(KEYS.admin, JSON.stringify(v));
-    sectionAdmin.classList.toggle('hidden', !v);
-    render();
-  };
-  const ADMIN_PASSWORD = "coach2025";
+      // Boutons “Choisir” qui sélectionnent dans le select
+      document.querySelectorAll('.smallBtn').forEach(b=>{
+        b.onclick = (e)=>{
+          els.select.value = e.target.dataset.id;
+          window.scrollTo({top:0,behavior:'smooth'});
+        };
+      });
 
-  btnAdmin.addEventListener('click', () => {
-    try {
-      if (!isAdmin) {
-        const entered = prompt('🔐 Entrez le code admin :');
-        if (entered === ADMIN_PASSWORD) setAdmin(true);
-        else alert('Code incorrect ❌');
+      // Suppression (admin uniquement)
+      document.querySelectorAll('.smallBtnDel').forEach(b=>{
+        b.onclick = async (e)=>{
+          const id = e.target.dataset.id;
+          if(!window._isAdmin){ alert("Action réservée à l’admin."); return; }
+          if(!confirm("Supprimer ce créneau ?")) return;
+          const r = await fetch('/api/slots?id='+encodeURIComponent(id), { method:'DELETE' });
+          const data = await r.json();
+          await load();
+          alert(data.message || 'OK');
+        };
+      });
+    }
+
+    async function load(){
+      const r = await fetch('/api/slots');
+      const data = await r.json();
+      render(data.slots || []);
+    }
+
+    // Réserver
+    els.reserveForm.onsubmit = async (ev)=>{
+      ev.preventDefault();
+      els.reserveBtn.disabled = true; els.reserveMsg.textContent = 'Envoi...';
+      const payload = {
+        slotId: els.select.value,
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value
+      };
+      const r = await fetch('/api/reserve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await r.json();
+      els.reserveMsg.textContent = data.message || (r.ok ? 'Réservé !' : 'Erreur.');
+      els.reserveBtn.disabled = false;
+      if(r.ok){ await load(); }
+    };
+
+    // Admin
+    els.adminFab.onclick = ()=> els.adminDialog.showModal();
+    els.closeAdmin.onclick = ()=> els.adminDialog.close();
+    els.adminLogin.onclick = ()=>{
+      if(els.adminPass.value === ADMIN_PASSWORD){
+        window._isAdmin = true;
+        els.adminGate.style.display='none';
+        els.adminPanel.style.display='block';
       } else {
-        setAdmin(false);
+        alert('Mot de passe incorrect');
       }
-    } catch (e) { console.error(e); alert('Erreur: ' + e.message); }
-  });
+    };
+    els.createSlot.onclick = async ()=>{
+      if(!window._isAdmin){ alert("Mot de passe admin requis"); return; }
+      const payload = {
+        theme: els.a_theme.value || 'Séance Ardu Coaching',
+        type: els.a_type.value,
+        datetime: els.a_datetime.value,
+        capacity: Number(els.a_capacity.value||1),
+        broadcastMessage: els.a_sms.value || ''
+      };
+      els.adminMsg.textContent = 'Publication...';
+      const r = await fetch('/api/slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await r.json();
+      els.adminMsg.textContent = data.message || (r.ok ? 'Créneau publié' : 'Erreur');
+      if(r.ok){ els.a_theme.value=''; els.a_sms.value=''; await load(); }
+    };
 
-  btnClient.addEventListener('click', () => {
-    const sec = document.getElementById('section-client');
-    if (sec) window.scrollTo({ top: sec.offsetTop - 12, behavior: 'smooth' });
-  });
-
-  // Branding text
-  document.getElementById('brand').textContent = COMPANY_NAME;
-  document.getElementById('subtitle').textContent = `1ʳᵉ séance d’essai gratuite • ${FIXED_DAYS}`;
-
-  // —— Add slot
-  document.getElementById('add').addEventListener('click', () => {
-    const date  = document.getElementById('date').value;
-    const start = document.getElementById('start').value;
-    const end   = document.getElementById('end').value;
-    const cap   = Number(document.getElementById('cap').value || 6);
-    const theme = document.getElementById('theme').value || 'Renforcement doux';
-    if (!date) { alert('Choisis une date'); return; }
-    const sISO = toISO(date,start), eISO = toISO(date,end);
-    slots.push({ id:uid(), start:sISO, end:eISO, capacity:cap, theme });
-    save(); render();
-
-    // Notif SMS à tous les contacts déjà connus
-    if (SMS_ENDPOINT) {
-      const text = `[${COMPANY_NAME}] Nouveau créneau dispo !\n${date} ${start} → ${end}\nThème : ${theme}`;
-      notifyManySMS(uniquePhones(), text);
-    }
-  });
-
-  // seed test
-  document.getElementById('seed').addEventListener('click', () => {
-    const today = new Date();
-    const addDays = n => { const d = new Date(today); d.setDate(d.getDate()+n); return d; };
-    const mk = (d,sh,eh,cap,theme) => ({ id:uid(), start:setTime(d,sh), end:setTime(d,eh), capacity:cap, theme });
-    slots.push(
-      mk(addDays(1),'17:15','18:30',6,'Renforcement doux'),
-      mk(addDays(3),'17:30','18:45',6,'Mobilité & équilibre'),
-      mk(addDays(4),'10:00','11:00',1,'Individuel')
-    );
-    save(); render();
-  });
-
-  // wipe
-  document.getElementById('wipe').addEventListener('click', () => {
-    if (confirm('Supprimer toutes les données ?')) { slots = []; bookings = {}; save(); render(); }
-  });
-
-  // —— Render
-  function render(){
-    const now = new Date();
-    const upcoming = [...slots]
-      .filter(s => new Date(s.end) > now)
-      .sort((a,b) => new Date(a.start) - new Date(b.start));
-
-    elSlots.innerHTML = '';
-    elEmpty.style.display = upcoming.length ? 'none' : 'block';
-
-    upcoming.forEach(slot => {
-      const node = tpl.content.firstElementChild.cloneNode(true);
-      const d1 = new Date(slot.start), d2 = new Date(slot.end);
-      node.querySelector('.title').textContent = `${fmtDate(d1)} · ${fmtTime(d1)} – ${fmtTime(d2)}`;
-      node.querySelector('.theme').textContent = `Thème : ${slot.theme || 'Général'}`;
-      node.querySelector('.when').textContent  = `Capacité: ${slot.capacity}`;
-
-      const left   = capacityLeft(slot.id, slot.capacity);
-      const leftEl = node.querySelector('.left');
-      leftEl.innerHTML = left > 0
-        ? `<span class="badge ok">${left} place(s) dispo</span>`
-        : `<span class="badge warn">Complet</span>`;
-
-      const inName  = node.querySelector('.in-name');
-      const inPhone = node.querySelector('.in-phone');
-      const inPref  = node.querySelector('.in-pref');
-
-      const btnBook   = node.querySelector('.btn-book');
-      const btnShare  = node.querySelector('.btn-share');
-      const btnCancel = node.querySelector('.btn-cancel');
-      const btnDelete = node.querySelector('.btn-delete');
-      const btnSMS    = node.querySelector('.btn-sms');
-
-      // Admin controls
-      if (isAdmin) { btnDelete.classList.remove('hidden'); btnCancel.classList.add('hidden'); if (btnSMS) btnSMS.classList.remove('hidden'); }
-      btnDelete.addEventListener('click', () => { if (confirm('Supprimer ce créneau ?')) { delSlot(slot.id); render(); } });
-
-      // Booking
-      btnBook.addEventListener('click', () => {
-        const name = (inName.value  || '').trim();
-        const phone= (inPhone.value || '').trim();
-        const pref = (inPref?.value || '').trim();
-        if (!name || !phone) { alert('Nom et téléphone requis'); return; }
-        if (capacityLeft(slot.id,slot.capacity) <= 0) { alert('Désolé, ce créneau est complet'); return; }
-        addBooking(slot.id, name, phone, pref);
-        inName.value=''; inPhone.value=''; if (inPref) inPref.value=''; render();
-      });
-
-      // Cancel booking (simple)
-      btnCancel.addEventListener('click', () => {
-        const name = (inName.value || '').trim();
-        if (!name) { alert('Entre ton nom pour annuler ta réservation'); return; }
-        const list = bookings[slot.id] || [];
-        const bk = list.slice().reverse().find(b => b.name.toLowerCase() === name.toLowerCase());
-        if (!bk) { alert('Aucune réservation trouvée à ce nom'); return; }
-        cancelBooking(slot.id, bk.id); render();
-      });
-
-      btnShare.addEventListener('click', () => {
-        const text = `Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nPlaces restantes : ${capacityLeft(slot.id,slot.capacity)}\nRépondez avec votre nom pour réserver.`;
-        if (navigator.share) { navigator.share({ text }).catch(() => copy(text)); } else { copy(text); }
-      });
-
-      if (btnSMS) {
-        btnSMS.addEventListener('click', async () => {
-          const text = `[${COMPANY_NAME}] Nouveau créneau dispo !\n${fmtDate(d1)} ${fmtTime(d1)} → ${fmtTime(d2)}\nThème : ${slot.theme||'Général'}\nRépondez avec votre nom pour réserver.`;
-          const contacts = uniquePhones();
-          if (!contacts.length) { alert('Aucun contact enregistré pour l\'instant'); return; }
-          const ok = await notifyManySMS(contacts, text);
-          alert(ok ? `SMS envoyé à ${contacts.length} contact(s)` : 'Échec envoi SMS (vérifie SMS_ENDPOINT)');
-        });
-      }
-
-      elSlots.appendChild(node);
-    });
-  }
-
-  function capacityLeft(slotId, cap) {
-    const n = (bookings[slotId] || []).length;
-    return Math.max(0, (cap || 0) - n);
-  }
-
-  // —— ICI : confirmation client + notification ADMIN
-  function addBooking(slotId, name, phone, pref){
-    const list = bookings[slotId] || [];
-    list.push({ id: uid(), slotId, name, phone, pref, ts: new Date().toISOString() });
-    bookings[slotId] = list;
-    save();
-
-    // 1) SMS au client
-    const conf = `[${COMPANY_NAME}] Réservation confirmée — ${name}. À bientôt !`;
-    if (SMS_ENDPOINT) sendSMS(normalizePhone(phone), conf);
-
-    // 2) SMS à l'admin
-    if (SMS_ENDPOINT && ADMIN_PHONE && ADMIN_PHONE.trim()) {
-      const slot = slots.find(s => s.id === slotId);
-      const d1 = slot ? new Date(slot.start) : null;
-      const dateTxt = d1 ? fmtDate(d1) : '';
-      const timeTxt = d1 ? fmtTime(d1) : '';
-      const info = `[${COMPANY_NAME}] 📩 Nouvelle réservation
-Nom : ${name}
-Tel : ${phone}
-Créneau : ${dateTxt} ${timeTxt}`;
-      sendSMS(normalizePhone(ADMIN_PHONE), info);
-    }
-  }
-
-  function cancelBooking(slotId, bookingId){
-    bookings[slotId] = (bookings[slotId] || []).filter(b => b.id !== bookingId);
-    save();
-  }
-
-  function delSlot(id){
-    slots = slots.filter(s => s.id !== id);
-    delete bookings[id];
-    save();
-  }
-
-  function toISO(dateStr,timeStr){
-    const [y,m,d] = dateStr.split('-').map(Number);
-    const [hh,mm] = timeStr.split(':').map(Number);
-    const dt = new Date(y,m-1,d,hh,mm,0);
-    return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString();
-  }
-  function setTime(date,hhmm){
-    const [hh,mm] = hhmm.split(':').map(Number);
-    const d = new Date(date); d.setHours(hh,mm,0,0);
-    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString();
-  }
-  function copy(text){
-    if (navigator.clipboard) navigator.clipboard.writeText(text).then(()=>alert('Annonce copiée — colle dans WhatsApp'));
-  }
-
-  // —— SMS helpers (UNE SEULE VERSION)
-  function normalizePhone(p){
-    let x = (p || '').trim();
-    if (!x) return x;
-    if (x.startsWith('00')) x = '+' + x.slice(2);
-    if (!x.startsWith('+')) x = '+32' + x.replace(/^0/,'');
-    return x;
-  }
-  async function sendSMS(to, message){
-    if (!SMS_ENDPOINT) { console.warn('SMS_ENDPOINT non configuré'); return false; }
-    try {
-      const r = await fetch(SMS_ENDPOINT, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ to, message })
-      });
-      return r.ok;
-    } catch(e){ console.error(e); return false; }
-  }
-  async function notifyManySMS(list, text){
-    if (!SMS_ENDPOINT) { alert('SMS_ENDPOINT non configuré'); return false; }
-    const results = await Promise.all(list.map(n => sendSMS(normalizePhone(n), text)));
-    return results.every(Boolean);
-  }
-  function uniquePhones(){
-    const set = new Set();
-    Object.values(bookings).flat().forEach(b => { if (b.phone) set.add(b.phone); });
-    return Array.from(set);
-  }
-
-  // —— Admin: SMS test + Notifier tous
-  document.getElementById('sms-test').addEventListener('click', async () => {
-    const num = document.getElementById('sms-test-number').value.trim();
-    if (!num) return alert("Entre un numéro (+324...)");
-    const ok = await sendSMS(normalizePhone(num), `[${COMPANY_NAME}] Test SMS OK ✔️`);
-    alert(ok ? "SMS test envoyé" : "Échec envoi SMS");
-  });
-
-  document.getElementById('sms-notify-all').addEventListener('click', async () => {
-    const list = uniquePhones();
-    if (!list.length) return alert("Aucun contact enregistré");
-    const ok = await notifyManySMS(list, `[${COMPANY_NAME}] Nouveau créneau dispo — ouvre le lien et réserve !`);
-    alert(ok ? `SMS envoyé à ${list.length} contact(s)` : "Échec envoi SMS");
-  });
-
-  // init
-  render();
- </script>
+    load();
+  </script>
 </body>
 </html>
-
