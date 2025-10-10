@@ -73,10 +73,10 @@
     </div>
   </div>
 
-  <!-- Bouton Admin discret -->
+  <!-- Bouton Admin -->
   <button class="admin-fab" id="adminFab">Admin</button>
 
-  <!-- Modale Admin ultra simple -->
+  <!-- Modale Admin -->
   <dialog id="adminDialog" style="border:none;border-radius:16px;max-width:560px;width:96%;padding:0">
     <div class="card" style="border-radius:16px">
       <div class="inline" style="justify-content:space-between;margin-bottom:8px">
@@ -187,7 +187,6 @@
         els.select.appendChild(opt);
       });
 
-      // Boutons “Choisir” qui sélectionnent dans le select
       document.querySelectorAll('.smallBtn').forEach(b=>{
         b.onclick = (e)=>{
           els.select.value = e.target.dataset.id;
@@ -195,7 +194,6 @@
         };
       });
 
-      // Suppression (admin uniquement)
       document.querySelectorAll('.smallBtnDel').forEach(b=>{
         b.onclick = async (e)=>{
           const id = e.target.dataset.id;
@@ -209,25 +207,25 @@
       });
     }
 
-  async function load(){
-  const r = await fetch('/api/slots', { cache: 'no-store' });
-  const data = await r.json();
-  render(data.slots || []);
-}
+    async function load(){
+      const r = await fetch('/api/slots', { cache: 'no-store' });
+      const data = await r.json();
+      render(data.slots || []);
+    }
 
-
-    // Réserver
+    // Réserver -> maintenant via PATCH /api/slots (action reserve)
     els.reserveForm.onsubmit = async (ev)=>{
       ev.preventDefault();
       els.reserveBtn.disabled = true; els.reserveMsg.textContent = 'Envoi...';
       const payload = {
+        action: 'reserve',
         slotId: els.select.value,
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value
       };
-      const r = await fetch('/api/reserve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const r = await fetch('/api/slots', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       const data = await r.json();
-      els.reserveMsg.textContent = data.message || (r.ok ? 'Réservé !' : 'Erreur.');
+      els.reserveMsg.textContent = data.message || data.error || (r.ok ? 'Réservé !' : 'Erreur inconnue');
       els.reserveBtn.disabled = false;
       if(r.ok){ await load(); }
     };
@@ -256,9 +254,8 @@
       els.adminMsg.textContent = 'Publication...';
       const r = await fetch('/api/slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       const data = await r.json();
-     els.adminMsg.textContent = data.message || data.error || (r.ok ? 'Créneau publié' : 'Erreur inconnue');
-
-    if(r.ok){ els.a_theme.value=''; els.a_sms.value=''; await load(); }
+      els.adminMsg.textContent = data.message || data.error || (r.ok ? 'Créneau publié' : 'Erreur inconnue');
+      if(r.ok){ els.a_theme.value=''; els.a_sms.value=''; await load(); }
     };
 
     load();
