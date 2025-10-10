@@ -209,11 +209,12 @@
       });
     }
 
-    async function load(){
-      const r = await fetch('/api/slots');
-      const data = await r.json();
-      render(data.slots || []);
-    }
+  async function load(){
+  const r = await fetch('/api/slots', { cache: 'no-store' });
+  const data = await r.json();
+  render(data.slots || []);
+}
+
 
     // Réserver
     els.reserveForm.onsubmit = async (ev)=>{
@@ -255,8 +256,9 @@
       els.adminMsg.textContent = 'Publication...';
       const r = await fetch('/api/slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       const data = await r.json();
-      els.adminMsg.textContent = data.message || (r.ok ? 'Créneau publié' : 'Erreur');
-      if(r.ok){ els.a_theme.value=''; els.a_sms.value=''; await load(); }
+     els.adminMsg.textContent = data.message || data.error || (r.ok ? 'Créneau publié' : 'Erreur inconnue');
+
+    if(r.ok){ els.a_theme.value=''; els.a_sms.value=''; await load(); }
     };
 
     load();
