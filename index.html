@@ -32,6 +32,13 @@
     input,select,textarea{width:100%;padding:10px;border:1px solid #e4e6ef;border-radius:10px;background:#fff}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .notice{padding:10px;background:#f4f6ff;border:1px solid #e5e9ff;border-radius:10px}
+
+    /* Admin list styles */
+    .slot-admin{border:1px solid #ececf3;border-radius:10px;padding:10px;margin:10px 0;background:#fafbff}
+    .slot-admin h4{margin:0 0 6px;font-size:15px}
+    .slot-admin .meta{font-size:13px;color:#555;margin-bottom:6px}
+    .slot-admin ul{margin:6px 0 0 16px}
+    .chip{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#223; font-size:12px}
   </style>
 </head>
 <body>
@@ -77,7 +84,7 @@
   <button class="admin-fab" id="adminFab">Admin</button>
 
   <!-- Modale Admin -->
-  <dialog id="adminDialog" style="border:none;border-radius:16px;max-width:560px;width:96%;padding:0">
+  <dialog id="adminDialog" style="border:none;border-radius:16px;max-width:720px;width:96%;padding:0">
     <div class="card" style="border-radius:16px">
       <div class="inline" style="justify-content:space-between;margin-bottom:8px">
         <strong>Admin — Créer un créneau</strong>
@@ -121,6 +128,16 @@
         </div>
         <button id="createSlot" class="ok">Publier le créneau</button>
         <div id="adminMsg" class="small" style="margin-top:8px"></div>
+
+        <hr style="margin:14px 0;border:none;border-top:1px solid #eee">
+
+        <!-- 🆕 Liste Admin : participantes par créneau -->
+        <div>
+          <h3 style="margin:6px 0 6px">Réservations (admin)</h3>
+          <div class="small muted" style="margin-bottom:8px">Ici tu vois qui a réservé, par créneau.</div>
+          <div id="adminList"></div>
+        </div>
+
         <hr style="margin:14px 0;border:none;border-top:1px solid #eee">
         <div class="small muted">Astuce : tu peux supprimer un créneau plein depuis la liste publique.</div>
       </div>
@@ -151,6 +168,7 @@
       a_sms: document.getElementById('a_sms'),
       createSlot: document.getElementById('createSlot'),
       adminMsg: document.getElementById('adminMsg'),
+      adminList: document.getElementById('adminList'),
     };
 
     function fmt(dtISO){
@@ -159,10 +177,11 @@
     }
 
     function render(slots){
+      // Public list + select
       els.list.innerHTML = '';
       els.select.innerHTML = '';
-      if(!slots || slots.length===0){ els.empty.style.display='block'; return; }
-      els.empty.style.display='none';
+      if(!slots || slots.length===0){ els.empty.style.display='block'; }
+      else { els.empty.style.display='none'; }
 
       slots.forEach(s=>{
         const left = s.capacity - (s.booked||0);
@@ -187,6 +206,7 @@
         els.select.appendChild(opt);
       });
 
+      // Buttons Choose
       document.querySelectorAll('.smallBtn').forEach(b=>{
         b.onclick = (e)=>{
           els.select.value = e.target.dataset.id;
@@ -194,6 +214,7 @@
         };
       });
 
+      // Delete (admin only)
       document.querySelectorAll('.smallBtnDel').forEach(b=>{
         b.onclick = async (e)=>{
           const id = e.target.dataset.id;
@@ -205,6 +226,32 @@
           alert(data.message || 'OK');
         };
       });
+
+      // Admin attendees list
+      renderAdmin(slots);
+    }
+
+    // 🆕 Affichage admin des participantes par créneau
+    function renderAdmin(slots){
+      if(!window._isAdmin){ els.adminList.innerHTML = '<div class="small muted">Connecte-toi en admin pour voir les réservations.</div>'; return; }
+      if(!slots || !slots.length){ els.adminList.innerHTML = '<div class="small muted">Aucun créneau pour l’instant.</div>'; return; }
+
+      els.adminList.innerHTML = slots.map(s=>{
+        const left = s.capacity - (s.booked||0);
+        const attendees = (s.attendees||[]);
+        return `
+          <div class="slot-admin">
+            <h4>${s.theme} <span class="chip">${s.type}</span></h4>
+            <div class="meta">${fmt(s.datetime)} — Capacité ${s.capacity} • Réservé ${s.booked||0} • Restant ${left}</div>
+            <div class="small"><strong>Participants :</strong></div>
+            ${
+              attendees.length
+              ? `<ul>${attendees.map(a => `<li>${a.name} (<span class="muted">${a.phone}</span>)</li>`).join('')}</ul>`
+              : `<div class="small muted"><em>Aucun pour le moment</em></div>`
+            }
+          </div>
+        `;
+      }).join('');
     }
 
     async function load(){
@@ -213,7 +260,7 @@
       render(data.slots || []);
     }
 
-    // Réserver -> maintenant via PATCH /api/slots (action reserve)
+    // Réserver -> PATCH /api/slots (action reserve)
     els.reserveForm.onsubmit = async (ev)=>{
       ev.preventDefault();
       els.reserveBtn.disabled = true; els.reserveMsg.textContent = 'Envoi...';
@@ -238,6 +285,7 @@
         window._isAdmin = true;
         els.adminGate.style.display='none';
         els.adminPanel.style.display='block';
+        load(); // rafraîchir la liste admin avec les participantes
       } else {
         alert('Mot de passe incorrect');
       }
@@ -255,7 +303,10 @@
       const r = await fetch('/api/slots', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       const data = await r.json();
       els.adminMsg.textContent = data.message || data.error || (r.ok ? 'Créneau publié' : 'Erreur inconnue');
-      if(r.ok){ els.a_theme.value=''; els.a_sms.value=''; await load(); }
+      if(r.ok){
+        els.a_theme.value=''; els.a_sms.value='';
+        await load();
+      }
     };
 
     load();
