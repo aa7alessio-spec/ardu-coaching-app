@@ -1,43 +1,10 @@
-// api/reserve.js — KV si présent, sinon mémoire (fallback)
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+// api/reserve.js — stockage en MÉMOIRE (temporaire)
+let SLOTS = global.__SLOTS__ || [];
+if (!global.__SLOTS__) { global.__SLOTS__ = SLOTS; }
 
-let MEM_SLOTS = []; // utilisé seulement si pas de KV
-
-async function getSlots() {
-  if (KV_URL && KV_TOKEN) {
-    const r = await fetch(`${KV_URL}/get/slots`, {
-      headers: { Authorization: `Bearer ${KV_TOKEN}` }
-    });
-    if (!r.ok) throw new Error(`KV get failed: ${r.status} ${r.statusText}`);
-    const j = await r.json();
-    return j.result ? JSON.parse(j.result) : [];
-  } else {
-    return MEM_SLOTS;
-  }
-}
-
-async function setSlots(slots) {
-  if (KV_URL && KV_TOKEN) {
-    const r = await fetch(`${KV_URL}/set/slots`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${KV_TOKEN}`,
-        'Content-Type':'application/json'
-      },
-      body: JSON.stringify({ value: JSON.stringify(slots) })
-    });
-    if (!r.ok) throw new Error(`KV set failed: ${r.status} ${r.statusText}`);
-  } else {
-    MEM_SLOTS = slots;
-  }
-}
-
-const twilio = require('twilio');
-const TW_SID   = process.env.TWILIO_ACCOUNT_SID;
-const TW_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TW_FROM  = process.env.TWILIO_PHONE_NUMBER;
-const COACH_PHONE = process.env.COACH_PHONE;
+// NOTE: pour rester simple ici, on va référencer les mêmes données
+// que dans slots.js. Si ça ne suit pas, copie/colle aussi la logique
+// mémoire directement (ci-dessous on garde l'approche la plus simple).
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') { res.setHeader('Allow','POST'); return res.status(405).json({ message:'Méthode non autorisée' }); }
@@ -46,7 +13,17 @@ module.exports = async (req, res) => {
     const { slotId, name, phone } = req.body || {};
     if (!slotId || !name || !phone) return res.status(400).json({ message:'Champs manquants' });
 
-    const slots = await getSlots();
+    // Comme SLOTS est aussi utilisé dans slots.js, on va le chercher via GET local
+    // (pour rester robuste si Vercel isole les modules). Sinon, on garde un fallback basique.
+    let slots;
+    try {
+      // On appelle notre propre endpoint GET pour récupérer SLOTS courants
+      const base = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+      const r = await fetch(`${base}/api/slots`, { cache: 'no-store' });
+      const j = await r.json();
+      slots = j.slots || [];
+    } catch { slots = SLOTS; }
+
     const idx = slots.findIndex(s => s.id === slotId);
     if (idx === -1) return res.status(404).json({ message:'Créneau introuvable' });
 
@@ -58,27 +35,15 @@ module.exports = async (req, res) => {
     s.attendees = s.attendees || [];
     s.attendees.push({ name, phone });
     slots[idx] = s;
-    await setSlots(slots);
 
-    // SMS coach facultatif
-    if (TW_SID && TW_TOKEN && TW_FROM && COACH_PHONE) {
-      const client = twilio(TW_SID, TW_TOKEN);
-      const when = new Date(s.datetime).toLocaleString('fr-BE', { dateStyle:'medium', timeStyle:'short' });
-      await client.messages.create({
-        from: TW_FROM, to: COACH_PHONE,
-        body: `Ardu Coaching: ${name} (${phone}) a réservé "${s.theme}" (${s.type}) le ${when}. Restant: ${s.capacity - s.booked}`
-      }).catch(()=>{});
-      if (process.env.SEND_CLIENT_CONFIRMATION === '1') {
-        await client.messages.create({
-          from: TW_FROM, to: phone,
-          body: `Merci ${name}! Réservation confirmée pour "${s.theme}" (${s.type}).`
-        }).catch(()=>{});
-      }
-    }
+    // Miroir local (au cas où)
+    SLOTS = slots;
+    global.__SLOTS__ = SLOTS;
 
     return res.status(200).json({ message:'Réservation enregistrée' });
   } catch (e) {
     console.error('API /api/reserve error:', e);
-    return res.status(500).json({ message:'Erreur serveur', error: String(e?.message || e) });
+    return res.status(500).json({ message:'Erreur serveur (reserve)' });
   }
 };
+
